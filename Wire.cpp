@@ -455,7 +455,7 @@ void i2c0_isr(void)
 		// Continue Slave Receive
 		irqcount = 0;
 		#if defined(KINETISK)
-		attachInterrupt(18, TwoWire::sda_rising_isr, RISING);
+		attachInterrupt(TwoWire::sda_pin_num, TwoWire::sda_rising_isr, RISING);
 		#elif defined(KINETISL)
 		I2C0_FLT |= I2C_FLT_STOPIE;
 		#endif
@@ -477,7 +477,7 @@ void TwoWire::sda_rising_isr(void)
 {
 	//digitalWrite(3, HIGH);
 	if (!(I2C0_S & I2C_S_BUSY)) {
-		detachInterrupt(18);
+		detachInterrupt(sda_pin_num);
 		if (user_onReceive != NULL) {
 			rxBufferIndex = 0;
 			user_onReceive(rxBufferLength);
@@ -485,7 +485,7 @@ void TwoWire::sda_rising_isr(void)
 		//delayMicroseconds(100);
 	} else {
 		if (++irqcount >= 2 || !slave_mode) {
-			detachInterrupt(18);
+			detachInterrupt(sda_pin_num);
 		}
 	}
 	//digitalWrite(3, LOW);
