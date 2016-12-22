@@ -437,7 +437,7 @@ void i2c1_isr(void)
 		// Continue Slave Receive
 		irqcount = 0;
 		#if defined(KINETISK)
-		attachInterrupt(18, TwoWire1::sda_rising_isr, RISING);
+		attachInterrupt(TwoWire1::sda_pin_num, TwoWire1::sda_rising_isr, RISING);
 		#elif defined(KINETISL)
 		I2C1_FLT |= I2C_FLT_STOPIE;
 		#endif
@@ -459,7 +459,7 @@ void TwoWire1::sda_rising_isr(void)
 {
 	//digitalWrite(3, HIGH);
 	if (!(I2C1_S & I2C_S_BUSY)) {
-		detachInterrupt(18);
+		detachInterrupt(sda_pin_num);
 		if (user_onReceive != NULL) {
 			rxBufferIndex = 0;
 			user_onReceive(rxBufferLength);
@@ -467,7 +467,7 @@ void TwoWire1::sda_rising_isr(void)
 		//delayMicroseconds(100);
 	} else {
 		if (++irqcount >= 2 || !slave_mode) {
-			detachInterrupt(18);
+			detachInterrupt(sda_pin_num);
 		}
 	}
 	//digitalWrite(3, LOW);
@@ -761,5 +761,5 @@ void TwoWire1::onRequest( void (*function)(void) )
 TwoWire1 Wire1;
 
 
-#endif // __MK20DX128__ || __MK20DX256__
+#endif // __MK20DX256__ || __MK64FX512__ || __MK66FX1M0__ || __MKL26Z64__
 
