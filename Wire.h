@@ -25,6 +25,12 @@
 #include <inttypes.h>
 #include "Arduino.h"
 
+// You can choose which of these optional Wire objects to be created.  Note: they will only be created
+// for those boards who support a particular Wire buss... 
+#define WIRE_DEFINE_WIRE1
+#define WIRE_DEFINE_WIRE2
+#define WIRE_DEFINE_WIRE3
+
 #define BUFFER_LENGTH 32
 #define WIRE_HAS_END 1
 
@@ -232,40 +238,58 @@ public:
 extern TWBRemulation TWBR;
 #endif
 
+
 // T3.1, 3.2, 3.5, 3.6 and TLC all have WIRE1...
 #if defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__MKL26Z64__)
-extern "C" void i2c1_isr(void);
+// Lets create a base class to see if we can share  code 
+#ifndef WIRE_RX_BUFFER_LENGTH
+#define WIRE_RX_BUFFER_LENGTH BUFFER_LENGTH
+#endif
 
-class TwoWire1: public Stream
+#ifndef WIRE_TX_BUFFER_LENGTH
+#define WIRE_TX_BUFFER_LENGTH (BUFFER_LENGTH+1)
+#endif
+
+#if defined(WIRE_DEFINE_WIRE1) || defined(WIRE_DEFINE_WIRE2) || defined(WIRE_DEFINE_WIRE3)
+class TwoWireB: public Stream
 {
-  private:
-    static uint8_t rxBuffer[];
-    static uint8_t rxBufferIndex;
-    static uint8_t rxBufferLength;
+  protected:
+    uint8_t rxBuffer[WIRE_RX_BUFFER_LENGTH];
+    uint8_t rxBufferIndex;
+    uint8_t rxBufferLength;
 
-    static uint8_t txAddress;
-    static uint8_t txBuffer[];
-    static uint8_t txBufferIndex;
-    static uint8_t txBufferLength;
+    uint8_t txAddress;
+    uint8_t txBuffer[WIRE_TX_BUFFER_LENGTH];
+    uint8_t txBufferIndex;
+    uint8_t txBufferLength;
+    uint8_t slave_mode;
 
-    static uint8_t transmitting;
-    static void onRequestService(void);
-    static void onReceiveService(uint8_t*, int);
-    static void (*user_onRequest)(void);
-    static void (*user_onReceive)(int);
+    uint8_t transmitting;
+    void onRequestService(void);
+    void onReceiveService(uint8_t*, int);
+    void (*user_onRequest)(void);
+    void (*user_onReceive)(int);
     static void sda_rising_isr(void);
-    static uint8_t sda_pin_num;
-    static uint8_t scl_pin_num;
-    friend void i2c1_isr(void);
+    uint8_t sda_pin_num;
+    uint8_t scl_pin_num;
+    uint8_t isr(void);			// Process each of the ISRs...
+    uint8_t receiving;      // Our we receiving...
+    uint8_t irqcount;
+
+    KINETIS_I2C_t * kinetisk_pi2c; 
+    inline uint8_t i2c_status(void);
+	void i2c_wait(void);
+
   public:
-    TwoWire1();
-    void begin();
-    void begin(uint8_t);
+    TwoWireB();
+    virtual void begin() = 0;
+    virtual void begin(uint8_t) = 0;
     void begin(int);
-    void end();
+    virtual void end() = 0;
     void setClock(uint32_t);
-    void setSDA(uint8_t);
-    void setSCL(uint8_t);
+    virtual void setSDA(uint8_t) = 0;
+    virtual void setSCL(uint8_t) = 0;
+    virtual uint8_t checkSIM_SCG() = 0;
     void beginTransmission(uint8_t);
     void beginTransmission(int);
     uint8_t endTransmission(void);
@@ -290,126 +314,75 @@ class TwoWire1: public Stream
     using Print::write;
 };
 
+#endif
+
+#if defined(WIRE_DEFINE_WIRE1)
+extern "C" void i2c1_isr(void);
+
+class TwoWire1: public TwoWireB
+{
+  private:
+    static void sda_rising_isr(void);
+    friend void i2c1_isr(void);
+  public:
+    TwoWire1();
+    virtual void begin();
+    virtual void begin(uint8_t);
+    virtual void end();
+    virtual void setSDA(uint8_t);
+    virtual void setSCL(uint8_t);
+    virtual uint8_t checkSIM_SCG();
+
+    using TwoWireB::write;
+};
+
 extern TwoWire1 Wire1;
+#endif
 #endif
 
 // Teensy 3.5 and T3.6 also have Wire2
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
+#if defined(WIRE_DEFINE_WIRE2) && (defined(__MK64FX512__) || defined(__MK66FX1M0__))
 extern "C" void i2c2_isr(void);
 
-class TwoWire2: public Stream
+class TwoWire2: public TwoWireB
 {
   private:
-    static uint8_t rxBuffer[];
-    static uint8_t rxBufferIndex;
-    static uint8_t rxBufferLength;
-
-    static uint8_t txAddress;
-    static uint8_t txBuffer[];
-    static uint8_t txBufferIndex;
-    static uint8_t txBufferLength;
-
-    static uint8_t transmitting;
-    static void onRequestService(void);
-    static void onReceiveService(uint8_t*, int);
-    static void (*user_onRequest)(void);
-    static void (*user_onReceive)(int);
     static void sda_rising_isr(void);
-    static uint8_t sda_pin_num;
-    static uint8_t scl_pin_num;
     friend void i2c2_isr(void);
   public:
     TwoWire2();
-    void begin();
-    void begin(uint8_t);
-    void begin(int);
-    void end();
-    void setClock(uint32_t);
-    void setSDA(uint8_t);
-    void setSCL(uint8_t);
-    void beginTransmission(uint8_t);
-    void beginTransmission(int);
-    uint8_t endTransmission(void);
-    uint8_t endTransmission(uint8_t);
-    uint8_t requestFrom(uint8_t, uint8_t);
-    uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
-    uint8_t requestFrom(int, int);
-    uint8_t requestFrom(int, int, int);
-    virtual size_t write(uint8_t);
-    virtual size_t write(const uint8_t *, size_t);
-    virtual int available(void);
-    virtual int read(void);
-    virtual int peek(void);
-	virtual void flush(void);
-    void onReceive( void (*)(int) );
-    void onRequest( void (*)(void) );
-  
-    inline size_t write(unsigned long n) { return write((uint8_t)n); }
-    inline size_t write(long n) { return write((uint8_t)n); }
-    inline size_t write(unsigned int n) { return write((uint8_t)n); }
-    inline size_t write(int n) { return write((uint8_t)n); }
-    using Print::write;
+    virtual void begin();
+    virtual void begin(uint8_t);
+    virtual void end();
+    virtual void setSDA(uint8_t);
+    virtual void setSCL(uint8_t);
+    virtual uint8_t checkSIM_SCG();
+
+    using TwoWireB::write;
 };
 
 extern TwoWire2 Wire2;
 #endif
 
 // Only T3.6 has Wire3
-#if defined(__MK66FX1M0__)
+#if defined(WIRE_DEFINE_WIRE3) && defined(__MK66FX1M0__)
 extern "C" void i2c3_isr(void);
 
-class TwoWire3: public Stream
+class TwoWire3: public TwoWireB
 {
   private:
-    static uint8_t rxBuffer[];
-    static uint8_t rxBufferIndex;
-    static uint8_t rxBufferLength;
-
-    static uint8_t txAddress;
-    static uint8_t txBuffer[];
-    static uint8_t txBufferIndex;
-    static uint8_t txBufferLength;
-
-    static uint8_t transmitting;
-    static void onRequestService(void);
-    static void onReceiveService(uint8_t*, int);
-    static void (*user_onRequest)(void);
-    static void (*user_onReceive)(int);
     static void sda_rising_isr(void);
-    static uint8_t sda_pin_num;
-    static uint8_t scl_pin_num;
     friend void i2c3_isr(void);
   public:
     TwoWire3();
-    void begin();
-    void begin(uint8_t);
-    void begin(int);
-    void end();
-    void setClock(uint32_t);
-    void setSDA(uint8_t);
-    void setSCL(uint8_t);
-    void beginTransmission(uint8_t);
-    void beginTransmission(int);
-    uint8_t endTransmission(void);
-    uint8_t endTransmission(uint8_t);
-    uint8_t requestFrom(uint8_t, uint8_t);
-    uint8_t requestFrom(uint8_t, uint8_t, uint8_t);
-    uint8_t requestFrom(int, int);
-    uint8_t requestFrom(int, int, int);
-    virtual size_t write(uint8_t);
-    virtual size_t write(const uint8_t *, size_t);
-    virtual int available(void);
-    virtual int read(void);
-    virtual int peek(void);
-	virtual void flush(void);
-    void onReceive( void (*)(int) );
-    void onRequest( void (*)(void) );
-  
-    inline size_t write(unsigned long n) { return write((uint8_t)n); }
-    inline size_t write(long n) { return write((uint8_t)n); }
-    inline size_t write(unsigned int n) { return write((uint8_t)n); }
-    inline size_t write(int n) { return write((uint8_t)n); }
-    using Print::write;
+    virtual void begin();
+    virtual void begin(uint8_t);
+    virtual void end();
+    virtual void setSDA(uint8_t);
+    virtual void setSCL(uint8_t);
+    virtual uint8_t checkSIM_SCG();
+
+    using TwoWireB::write;
 };
 
 extern TwoWire3 Wire3;
