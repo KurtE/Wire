@@ -49,10 +49,8 @@ TwoWireB::TwoWireB()
 void TwoWireB::setClock(uint32_t frequency)
 {
 	if (!checkSIM_SCG()) {
-		Serial.println("Set Clock failed SIM_SCG");
 		return;
 	}
-	Serial.printf("setClock frequency: %u Bus: %u\n", frequency, F_BUS);
 
 #if F_BUS == 120000000
 	if (frequency < 400000) {
