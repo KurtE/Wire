@@ -553,10 +553,27 @@ int TwoWireB::peek(void)
 }
 
 
-
-
-
 // alternate function prototypes
+void TwoWireB::send(uint8_t *s, uint8_t n)   
+{
+	write(s, n); 
+}
+void TwoWireB::send(int n)
+{ 
+	write((uint8_t)n); 
+}
+
+void TwoWireB::send(char *s)
+{ 
+	write(s); 
+}
+
+uint8_t TwoWireB::receive(void) 
+{
+    int c = read();
+    if (c < 0) return 0;
+    return c;
+}
 
 uint8_t TwoWireB::requestFrom(uint8_t address, uint8_t quantity)
 {
