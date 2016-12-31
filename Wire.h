@@ -46,7 +46,7 @@
 #define WIRE_TX_BUFFER_LENGTH (BUFFER_LENGTH+1)
 #endif
 
-class TwoWireB: public Stream
+class TwoWire: public Stream
 {
   protected:
     uint8_t rxBuffer[WIRE_RX_BUFFER_LENGTH];
@@ -76,7 +76,7 @@ class TwoWireB: public Stream
 	void i2c_wait(void);
 
   public:
-    TwoWireB();
+    TwoWire();
     virtual void begin() = 0;
     virtual void begin(uint8_t) = 0;
     void begin(int);
@@ -117,13 +117,13 @@ class TwoWireB: public Stream
 #if defined(WIRE_DEFINE_WIRE0) 
 extern "C" void i2c0_isr(void);
 
-class TwoWire : public TwoWireB
+class TwoWire0 : public TwoWire
 {
   private:
     static void sda_rising_isr(void);
     friend void i2c0_isr(void);
   public:
-    TwoWire();
+    TwoWire0();
     virtual void begin();
     virtual void begin(uint8_t);
     virtual void end();
@@ -131,10 +131,10 @@ class TwoWire : public TwoWireB
     virtual void setSCL(uint8_t);
     virtual uint8_t checkSIM_SCG();
 
-    using TwoWireB::write;
+    using TwoWire::write;
 };
 
-extern TwoWire Wire;
+extern TwoWire0 Wire;
 #endif
 
 #else
@@ -346,7 +346,7 @@ extern TWBRemulation TWBR;
 #if defined(WIRE_DEFINE_WIRE1)
 extern "C" void i2c1_isr(void);
 
-class TwoWire1: public TwoWireB
+class TwoWire1: public TwoWire
 {
   private:
     static void sda_rising_isr(void);
@@ -360,7 +360,7 @@ class TwoWire1: public TwoWireB
     virtual void setSCL(uint8_t);
     virtual uint8_t checkSIM_SCG();
 
-    using TwoWireB::write;
+    using TwoWire::write;
 };
 
 extern TwoWire1 Wire1;
@@ -371,7 +371,7 @@ extern TwoWire1 Wire1;
 #if defined(WIRE_DEFINE_WIRE2) && (defined(__MK64FX512__) || defined(__MK66FX1M0__))
 extern "C" void i2c2_isr(void);
 
-class TwoWire2: public TwoWireB
+class TwoWire2: public TwoWire
 {
   private:
     static void sda_rising_isr(void);
@@ -385,7 +385,7 @@ class TwoWire2: public TwoWireB
     virtual void setSCL(uint8_t);
     virtual uint8_t checkSIM_SCG();
 
-    using TwoWireB::write;
+    using TwoWire::write;
 };
 
 extern TwoWire2 Wire2;
@@ -395,7 +395,7 @@ extern TwoWire2 Wire2;
 #if defined(WIRE_DEFINE_WIRE3) && defined(__MK66FX1M0__)
 extern "C" void i2c3_isr(void);
 
-class TwoWire3: public TwoWireB
+class TwoWire3: public TwoWire
 {
   private:
     static void sda_rising_isr(void);
@@ -409,7 +409,7 @@ class TwoWire3: public TwoWireB
     virtual void setSCL(uint8_t);
     virtual uint8_t checkSIM_SCG();
 
-    using TwoWireB::write;
+    using TwoWire::write;
 };
 
 extern TwoWire3 Wire3;

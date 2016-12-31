@@ -30,7 +30,7 @@
 //#include "HardwareSerial.h"
 #include "Wire.h"
 
-TwoWire3::TwoWire3() : TwoWireB()
+TwoWire3::TwoWire3() : TwoWire()
 {
 	kinetisk_pi2c = &KINETIS_I2C3;
 	sda_pin_num = 56;

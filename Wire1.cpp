@@ -30,7 +30,7 @@
 #include "Wire.h"
 
 
-TwoWire1::TwoWire1() : TwoWireB()
+TwoWire1::TwoWire1() : TwoWire()
 {
 	kinetisk_pi2c = &KINETIS_I2C1;
 #if defined(__MK20DX256__) // T3.2

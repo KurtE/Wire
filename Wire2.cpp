@@ -31,7 +31,7 @@
 #include "Wire.h"
 
 
-TwoWire2::TwoWire2() : TwoWireB()
+TwoWire2::TwoWire2() : TwoWire()
 {
 	kinetisk_pi2c = &KINETIS_I2C2;
 	sda_pin_num = 4;  // only 1 valid one
