@@ -20,321 +20,559 @@
 */
 
 #include "Wire.h"
-#if defined (WIRE_DEFINE_WIRE0)
-#if defined(__arm__) && defined(CORE_TEENSY)
 
+#if defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__MKL26Z64__)
+#if defined (WIRE_DEFINE_WIRE1) || defined(WIRE_DEFINE_WIRE2) || defined(WIRE_DEFINE_WIRE3)
 #include "kinetis.h"
 #include <string.h> // for memcpy
 #include "core_pins.h"
 //#include "HardwareSerial.h"
 #include "Wire.h"
 
-TwoWire::TwoWire() : TwoWireB()
-{
-	kinetisk_pi2c = &KINETIS_I2C0;
-	sda_pin_num = A4;
-	scl_pin_num = A5;
-}
-
-
-void TwoWire::begin(void) 
-{
-	//serial_begin(BAUD2DIV(115200));
-	//serial_print("\nWire Begin\n");
-
-	slave_mode = 0;
-	SIM_SCGC4 |= SIM_SCGC4_I2C0; // TODO: use bitband
-	I2C0_C1 = 0;
-	// On Teensy 3.0 external pullup resistors *MUST* be used
-	// the PORT_PCR_PE bit is ignored when in I2C mode
-	// I2C will not work at all without pullup resistors
-	// It might seem like setting PORT_PCR_PE & PORT_PCR_PS
-	// would enable pullup resistors.  However, there seems
-	// to be a bug in chip while I2C is enabled, where setting
-	// those causes the port to be driven strongly high.
-	if (sda_pin_num == 18) {
-		CORE_PIN18_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-	} else if (sda_pin_num == 17) {
-		CORE_PIN17_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	} else if (sda_pin_num == 34) {
-		CORE_PIN34_CONFIG = PORT_PCR_MUX(5)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-	} else if (sda_pin_num == 8) {
-		CORE_PIN8_CONFIG = PORT_PCR_MUX(7)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-	} else if (sda_pin_num == 48) {
-		CORE_PIN48_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#endif	
-	}
-	if (scl_pin_num == 19) {
-		CORE_PIN19_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-	} else if (scl_pin_num == 16) {
-		CORE_PIN16_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	} else if (scl_pin_num == 33) {
-		CORE_PIN33_CONFIG = PORT_PCR_MUX(5)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-	} else if (scl_pin_num == 7) {
-		CORE_PIN7_CONFIG = PORT_PCR_MUX(7)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-	} else if (scl_pin_num == 47) {
-		CORE_PIN47_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#endif	
-	}
-	setClock(100000);
-	I2C0_C2 = I2C_C2_HDRS;
-	I2C0_C1 = I2C_C1_IICEN;
-	//pinMode(3, OUTPUT);
-	//pinMode(4, OUTPUT);
-}
-
-
-void TwoWire::setSDA(uint8_t pin)
-{
-	if (pin == sda_pin_num) return;
-	if ((SIM_SCGC4 & SIM_SCGC4_I2C0)) {
-		if (sda_pin_num == 18) {
-			CORE_PIN18_CONFIG = 0;
-		} else if (sda_pin_num == 17) {
-			CORE_PIN17_CONFIG = 0;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-		} else if (sda_pin_num == 34) {
-			CORE_PIN34_CONFIG = 0;
-		} else if (sda_pin_num == 8) {
-			CORE_PIN8_CONFIG = 0;
-		} else if (sda_pin_num == 48) {
-			CORE_PIN48_CONFIG = 0;
-#endif	
-		}
-
-		if (pin == 18) {
-			CORE_PIN18_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-		} else if (pin == 17) {
-			CORE_PIN17_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-		} else if (pin == 34) {
-			CORE_PIN34_CONFIG = PORT_PCR_MUX(5)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-		} else if (pin == 8) {
-			CORE_PIN8_CONFIG = PORT_PCR_MUX(7)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-		} else if (pin == 48) {
-			CORE_PIN48_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#endif	
-		}
-	}
-	sda_pin_num = pin;
-}
-
-void TwoWire::setSCL(uint8_t pin)
-{
-	if (pin == scl_pin_num) return;
-	if ((SIM_SCGC4 & SIM_SCGC4_I2C0)) {
-		if (scl_pin_num == 19) {
-			CORE_PIN19_CONFIG = 0;
-		} else if (scl_pin_num == 16) {
-			CORE_PIN16_CONFIG = 0;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-		} else if (scl_pin_num == 33) {
-			CORE_PIN33_CONFIG = 0;
-		} else if (scl_pin_num == 7) {
-			CORE_PIN7_CONFIG = 0;
-		} else if (scl_pin_num == 47) {
-			CORE_PIN47_CONFIG = 0;
-#endif	
-		}
-
-		if (pin == 19) {
-			CORE_PIN19_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-		} else if (pin == 16) {
-			CORE_PIN16_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-		} else if (pin == 33) {
-			CORE_PIN33_CONFIG = PORT_PCR_MUX(5)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-		} else if (pin == 7) {
-			CORE_PIN7_CONFIG = PORT_PCR_MUX(7)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-		} else if (pin == 47) {
-			CORE_PIN47_CONFIG = PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE;
-#endif	
-		}
-	}
-	scl_pin_num = pin;
-}
-
-void TwoWire::begin(uint8_t address)
-{
-	begin();
-	I2C0_A1 = address << 1;
-	slave_mode = 1;
-	I2C0_C1 = I2C_C1_IICEN | I2C_C1_IICIE;
-	NVIC_ENABLE_IRQ(IRQ_I2C0);
-}
-
-uint8_t TwoWire::checkSIM_SCG()
-{
-	return ( SIM_SCGC4 & SIM_SCGC4_I2C0)? 1 : 0;  //Test to see if we have done a begin...
-
-}
-
-void TwoWire::end()
-{
-	if (!(SIM_SCGC4 & SIM_SCGC4_I2C0)) return;
-	NVIC_DISABLE_IRQ(IRQ_I2C0);
-	I2C0_C1 = 0;
-	if (sda_pin_num == 18) {
-		CORE_PIN18_CONFIG = 0;
-	} else if (sda_pin_num == 17) {
-		CORE_PIN17_CONFIG = 0;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	} else if (sda_pin_num == 34) {
-		CORE_PIN34_CONFIG = 0;
-	} else if (sda_pin_num == 8) {
-		CORE_PIN8_CONFIG = 0;
-	} else if (sda_pin_num == 48) {
-		CORE_PIN48_CONFIG = 0;
-#endif	
-	}
-	if (scl_pin_num == 19) {
-		CORE_PIN19_CONFIG = 0;
-	} else if (scl_pin_num == 16) {
-		CORE_PIN16_CONFIG = 0;
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	} else if (scl_pin_num == 33) {
-		CORE_PIN33_CONFIG = 0;
-	} else if (scl_pin_num == 7) {
-		CORE_PIN7_CONFIG = 0;
-	} else if (scl_pin_num == 47) {
-		CORE_PIN47_CONFIG = 0;
-#endif	
-	}
-	SIM_SCGC4 &= ~SIM_SCGC4_I2C0; // TODO: use bitband
-}
-
-void i2c0_isr(void)
-{
-	if (Wire.isr() ) {
-		// Hack that mainline function says to set
-		attachInterrupt(Wire.sda_pin_num, TwoWire::sda_rising_isr, RISING);
-	}
-
-}
-
-// Detects the stop condition that terminates a slave receive transfer.
-// Sadly, the I2C in Kinetis K series lacks the stop detect interrupt
-// This pin change interrupt hack is needed to detect the stop condition
-void TwoWire::sda_rising_isr(void)
-{
-	//digitalWrite(3, HIGH);
-	if (!(I2C0_S & I2C_S_BUSY)) {
-		detachInterrupt(Wire.sda_pin_num);
-		if (Wire.user_onReceive != NULL) {
-			Wire.rxBufferIndex = 0;
-			Wire.user_onReceive(Wire.rxBufferLength);
-		}
-		//delayMicroseconds(100);
-	} else {
-		if (++Wire.irqcount >= 2 || !Wire.slave_mode) {
-			detachInterrupt(Wire.sda_pin_num);
-		}
-	}
-	//digitalWrite(3, LOW);
-}
-
-
-
-//TwoWire Wire = TwoWire();
-TwoWire Wire;
-
-
-#endif // __MK20DX128__ || __MK20DX256__
-
-
-
-#if defined(__AVR__)
-
-extern "C" {
-  #include <stdlib.h>
-  #include <string.h>
-  #include <inttypes.h>
-  #include "twi.h"
-}
-
-
-// Initialize Class Variables //////////////////////////////////////////////////
-
-uint8_t TwoWire::rxBuffer[BUFFER_LENGTH];
-uint8_t TwoWire::rxBufferIndex = 0;
-uint8_t TwoWire::rxBufferLength = 0;
-
-uint8_t TwoWire::txAddress = 0;
-uint8_t TwoWire::txBuffer[BUFFER_LENGTH];
-uint8_t TwoWire::txBufferIndex = 0;
-uint8_t TwoWire::txBufferLength = 0;
-
-uint8_t TwoWire::transmitting = 0;
-void (*TwoWire::user_onRequest)(void);
-void (*TwoWire::user_onReceive)(int);
-
-// Constructors ////////////////////////////////////////////////////////////////
 
 TwoWire::TwoWire()
 {
+    receiving = 0;      // Our we receiving...
+    irqcount = 0;
+    transmitting = 0;
+    user_onRequest = 0;
+    user_onReceive = 0;
+    rxBufferIndex = 0;
+	rxBufferLength = 0;
+	txBufferIndex = 0;
+	txBufferLength = 0;
+
 }
 
-// Public Methods //////////////////////////////////////////////////////////////
 
-void TwoWire::begin(void)
-{
-  rxBufferIndex = 0;
-  rxBufferLength = 0;
-
-  txBufferIndex = 0;
-  txBufferLength = 0;
-
-  twi_init();
-}
-
-void TwoWire::begin(uint8_t address)
-{
-  twi_setAddress(address);
-  twi_attachSlaveTxEvent(onRequestService);
-  twi_attachSlaveRxEvent(onReceiveService);
-  begin();
-}
-
-void TwoWire::begin(int address)
-{
-  begin((uint8_t)address);
-}
-
-void TwoWire::end()
-{
-  TWCR &= ~(_BV(TWEN) | _BV(TWIE) | _BV(TWEA));
-  digitalWrite(SDA, 0);
-  digitalWrite(SCL, 0);
-}
 
 void TwoWire::setClock(uint32_t frequency)
 {
-  TWBR = ((F_CPU / frequency) - 16) / 2;
+	if (!checkSIM_SCG()) {
+		return;
+	}
+
+#if F_BUS == 120000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV1152; // 104 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV288; // 416 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV128; // 0.94 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 108000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV1024; // 105 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV256; //  422 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV112; // 0.96 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 96000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV960; // 100 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV240; // 400 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV96; // 1.0 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 90000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV896; // 100 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV224; // 402 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV88; // 1.02 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 80000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV768; // 104 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV192; // 416 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV80; // 1.0 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 72000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV640; // 112 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV192; // 375 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV72; // 1.0 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 64000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV640; // 100 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV160; // 400 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV64; // 1.0 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 60000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x2C;	// 104 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x1C; // 416 kHz
+	} else {
+		kinetisk_pi2c->F = 0x12; // 938 kHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 56000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x2B;	// 109 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x1C; // 389 kHz
+	} else {
+		kinetisk_pi2c->F = 0x0E; // 1 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 54000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = I2C_F_DIV512;	// 105 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = I2C_F_DIV128; // 422 kHz
+	} else {
+		kinetisk_pi2c->F = I2C_F_DIV56; // 0.96 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 48000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x27;	// 100 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x1A; // 400 kHz
+	} else {
+		kinetisk_pi2c->F = 0x0D; // 1 MHz
+	}
+	kinetisk_pi2c->FLT = 4;
+#elif F_BUS == 40000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x29;	// 104 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x19; // 416 kHz
+	} else {
+		kinetisk_pi2c->F = 0x0B; // 1 MHz
+	}
+	kinetisk_pi2c->FLT = 3;
+#elif F_BUS == 36000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x28;	// 113 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x19; // 375 kHz
+	} else {
+		kinetisk_pi2c->F = 0x0A; // 1 MHz
+	}
+	kinetisk_pi2c->FLT = 3;
+#elif F_BUS == 24000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x1F; // 100 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x12; // 375 kHz
+	} else {
+		kinetisk_pi2c->F = 0x02; // 1 MHz
+	}
+	kinetisk_pi2c->FLT = 2;
+#elif F_BUS == 16000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x20; // 100 kHz
+	} else if (frequency < 1000000) {
+		kinetisk_pi2c->F = 0x07; // 400 kHz
+	} else {
+		kinetisk_pi2c->F = 0x00; // 800 MHz
+	}
+	kinetisk_pi2c->FLT = 1;
+#elif F_BUS == 8000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x14; // 100 kHz
+	} else {
+		kinetisk_pi2c->F = 0x00; // 400 kHz
+	}
+	kinetisk_pi2c->FLT = 1;
+#elif F_BUS == 4000000
+	if (frequency < 400000) {
+		kinetisk_pi2c->F = 0x07; // 100 kHz
+	} else {
+		kinetisk_pi2c->F = 0x00; // 200 kHz
+	}
+	kinetisk_pi2c->FLT = 1;
+#elif F_BUS == 2000000
+	kinetisk_pi2c->F = 0x00; // 100 kHz
+	kinetisk_pi2c->FLT = 1;
+#else
+#error "F_BUS must be 120, 108, 96, 9, 80, 72, 64, 60, 56, 54, 48, 40, 36, 24, 16, 8, 4 or 2 MHz"
+#endif
 }
 
-void TwoWire::setSDA(uint8_t pin)
+
+
+uint8_t TwoWire::isr(void)
+{
+	uint8_t retval = 0;
+	uint8_t status, c1, data;
+
+	status = kinetisk_pi2c->S;
+	//serial_print(".");
+	if (status & I2C_S_ARBL) {
+		// Arbitration Lost
+		kinetisk_pi2c->S = I2C_S_ARBL;
+		//serial_print("a");
+		if (receiving && rxBufferLength > 0) {
+			// TODO: does this detect the STOP condition in slave receive mode?
+
+
+		}
+		if (!(status & I2C_S_IAAS)) return 0;
+	}
+	if (status & I2C_S_IAAS) {
+		//serial_print("\n");
+		// Addressed As A Slave
+		if (status & I2C_S_SRW) {
+			//serial_print("T");
+			// Begin Slave Transmit
+			receiving = 0;
+			txBufferLength = 0;
+			if (user_onRequest != NULL) {
+				user_onRequest();
+			}
+			if (txBufferLength == 0) {
+				// is this correct, transmitting a single zero
+				// when we should send nothing?  Arduino's AVR
+				// implementation does this, but is it ok?
+				txBufferLength = 1;
+				txBuffer[0] = 0;
+			}
+			kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_TX;
+			kinetisk_pi2c->D = txBuffer[0];
+			txBufferIndex = 1;
+		} else {
+			// Begin Slave Receive
+			//serial_print("R");
+			receiving = 1;
+			rxBufferLength = 0;
+			kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_IICIE;
+			data = kinetisk_pi2c->D;
+		}
+		kinetisk_pi2c->S = I2C_S_IICIF;
+		return 0;
+	}
+	#if defined(KINETISL)
+	c1 = kinetisk_pi2c->FLT;
+	if ((c1 & I2C_FLT_STOPF) && (c1 & I2C_FLT_STOPIE)) {
+		kinetisk_pi2c->FLT = c1 & ~I2C_FLT_STOPIE;
+		if (user_onReceive != NULL) {
+			rxBufferIndex = 0;
+			user_onReceive(rxBufferLength);
+		}
+	}
+	#endif
+	c1 = kinetisk_pi2c->C1;
+	if (c1 & I2C_C1_TX) {
+		// Continue Slave Transmit
+		//serial_print("t");
+		if ((status & I2C_S_RXAK) == 0) {
+			//serial_print(".");
+			// Master ACK'd previous byte
+			if (txBufferIndex < txBufferLength) {
+				kinetisk_pi2c->D = txBuffer[txBufferIndex++];
+			} else {
+				kinetisk_pi2c->D = 0;
+			}
+			kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_TX;
+		} else {
+			//serial_print("*");
+			// Master did not ACK previous byte
+			kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_IICIE;
+			data = kinetisk_pi2c->D;
+		}
+	} else {
+		// Continue Slave Receive
+		irqcount = 0;
+		#if defined(KINETISK)
+		retval = 1;
+		#elif defined(KINETISL)
+		kinetisk_pi2c->FLT |= I2C_FLT_STOPIE;
+		#endif
+		//digitalWriteFast(4, HIGH);
+		data = kinetisk_pi2c->D;
+		//serial_phex(data);
+		if (rxBufferLength < BUFFER_LENGTH && receiving) {
+			rxBuffer[rxBufferLength++] = data;
+		}
+		//digitalWriteFast(4, LOW);
+	}
+	kinetisk_pi2c->S = I2C_S_IICIF;
+	return retval;
+}
+
+
+// Chapter 44: Inter-Integrated Circuit (I2C) - Page 1012
+//  kinetisk_pi2c->A1      // I2C Address Register 1
+//  I2C1_F       // I2C Frequency Divider register
+//  I2C1_C1      // I2C Control Register 1
+//  I2C1_S       // I2C Status register
+//  I2C1_D       // I2C Data I/O register
+//  I2C1_C2      // I2C Control Register 2
+//  I2C1_FLT     // I2C Programmable Input Glitch Filter register
+
+uint8_t TwoWire::i2c_status(void)
+{
+#if 0	
+	static uint32_t p=0xFFFF;
+	uint32_t s = kinetisk_pi2c->S;
+	if (s != p) {
+		//Serial.printf("(%02X)", s);
+		p = s;
+	}
+	return s;
+#else
+	return kinetisk_pi2c->S;
+#endif	
+}
+
+void TwoWire::i2c_wait(void)
+{
+#if 0
+	while (!(kinetisk_pi2c->S & I2C_S_IICIF)) ; // wait
+	kinetisk_pi2c->S = I2C_S_IICIF;
+#endif
+	//Serial.write('^');
+	while (1) {
+		if ((i2c_status() & I2C_S_IICIF)) break;
+	}
+	kinetisk_pi2c->S = I2C_S_IICIF;
+}
+
+void TwoWire::beginTransmission(uint8_t address)
+{
+	txBuffer[0] = (address << 1);
+	transmitting = 1;
+	txBufferLength = 1;
+}
+
+size_t TwoWire::write(uint8_t data)
+{
+	if (transmitting || slave_mode) {
+		if (txBufferLength >= BUFFER_LENGTH+1) {
+			setWriteError();
+			return 0;
+		}
+		txBuffer[txBufferLength++] = data;
+		return 1;
+	}
+	return 0;
+}
+
+size_t TwoWire::write(const uint8_t *data, size_t quantity)
+{
+	if (transmitting || slave_mode) {
+		size_t avail = BUFFER_LENGTH+1 - txBufferLength;
+		if (quantity > avail) {
+			quantity = avail;
+			setWriteError();
+		}
+		memcpy(txBuffer + txBufferLength, data, quantity);
+		txBufferLength += quantity;
+		return quantity;
+	}
+	return 0;
+}
+
+void TwoWire::flush(void)
 {
 }
 
-void TwoWire::setSCL(uint8_t pin)
+
+uint8_t TwoWire::endTransmission(uint8_t sendStop)
 {
+	uint8_t i, status, ret=0;
+
+	// clear the status flags
+	kinetisk_pi2c->S = I2C_S_IICIF | I2C_S_ARBL;
+	// now take control of the bus...
+	if (kinetisk_pi2c->C1 & I2C_C1_MST) {
+		// we are already the bus master, so send a repeated start
+		//Serial.print("rstart:");
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_RSTA | I2C_C1_TX;
+	} else {
+		// we are not currently the bus master, so wait for bus ready
+		//Serial.print("busy:");
+		uint32_t wait_begin = millis();
+		while (i2c_status() & I2C_S_BUSY) {
+			//Serial.write('.') ;
+			if (millis() - wait_begin > 15) {
+				// bus stuck busy too long
+				kinetisk_pi2c->C1 = 0;
+				kinetisk_pi2c->C1 = I2C_C1_IICEN;
+				//Serial.println("abort");
+				return 4;
+			}
+		}
+		// become the bus master in transmit mode (send start)
+		slave_mode = 0;
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
+	}
+	// wait until start condition establishes control of the bus
+	while (1) {
+		status = i2c_status();
+		if ((status & I2C_S_BUSY)) break;
+	}
+	// transmit the address and data
+	for (i=0; i < txBufferLength; i++) {
+		kinetisk_pi2c->D = txBuffer[i];
+		//Serial.write('^');
+		while (1) {
+			status = i2c_status();
+			if ((status & I2C_S_IICIF)) break;
+			if (!(status & I2C_S_BUSY)) break;
+		}
+		kinetisk_pi2c->S = I2C_S_IICIF;
+		//Serial.write('$');
+		status = i2c_status();
+		if ((status & I2C_S_ARBL)) {
+			// we lost bus arbitration to another master
+			// TODO: what is the proper thing to do here??
+			//Serial.printf(" c1=%02X ", kinetisk_pi2c->C1);
+			kinetisk_pi2c->C1 = I2C_C1_IICEN;
+			ret = 4; // 4:other error
+			break;
+		}
+		if (!(status & I2C_S_BUSY)) {
+			// suddenly lost control of the bus!
+			kinetisk_pi2c->C1 = I2C_C1_IICEN;
+			ret = 4; // 4:other error
+			break;
+		}
+		if (status & I2C_S_RXAK) {
+			// the slave device did not acknowledge
+			if (i == 0) {
+				ret = 2; // 2:received NACK on transmit of address
+			} else {
+				ret = 3; // 3:received NACK on transmit of data 
+			}
+			sendStop = 1;
+			break;
+		}
+	}
+	if (sendStop) {
+		// send the stop condition
+		kinetisk_pi2c->C1 = I2C_C1_IICEN;
+		// TODO: do we wait for this somehow?
+	}
+	transmitting = 0;
+	//Serial.print(" ret=");
+	//Serial.println(ret);
+	return ret;
 }
 
-uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint8_t sendStop)
-{
-  // clamp to buffer length
-  if(quantity > BUFFER_LENGTH){
-    quantity = BUFFER_LENGTH;
-  }
-  // perform blocking read into buffer
-  uint8_t read = twi_readFrom(address, rxBuffer, quantity, sendStop);
-  // set rx buffer iterator vars
-  rxBufferIndex = 0;
-  rxBufferLength = read;
 
-  return read;
+uint8_t TwoWire::requestFrom(uint8_t address, uint8_t length, uint8_t sendStop)
+{
+	uint8_t tmp __attribute__((unused));
+	uint8_t status, count=0;
+
+	rxBufferIndex = 0;
+	rxBufferLength = 0;
+	//serial_print("requestFrom\n");
+	// clear the status flags
+	kinetisk_pi2c->S = I2C_S_IICIF | I2C_S_ARBL;
+	// now take control of the bus...
+	if (kinetisk_pi2c->C1 & I2C_C1_MST) {
+		// we are already the bus master, so send a repeated start
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_RSTA | I2C_C1_TX;
+	} else {
+		// we are not currently the bus master, so wait for bus ready
+		while (i2c_status() & I2C_S_BUSY) ;
+		// become the bus master in transmit mode (send start)
+		slave_mode = 0;
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
+	}
+	// send the address
+	kinetisk_pi2c->D = (address << 1) | 1;
+	i2c_wait();
+	status = i2c_status();
+	if ((status & I2C_S_RXAK) || (status & I2C_S_ARBL)) {
+		// the slave device did not acknowledge
+		// or we lost bus arbitration to another master
+		kinetisk_pi2c->C1 = I2C_C1_IICEN;
+		return 0;
+	}
+	if (length == 0) {
+		// TODO: does anybody really do zero length reads?
+		// if so, does this code really work?
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | (sendStop ? 0 : I2C_C1_MST);
+		return 0;
+	} else if (length == 1) {
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TXAK;
+	} else {
+		kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST;
+	}
+	tmp = kinetisk_pi2c->D; // initiate the first receive
+	while (length > 1) {
+		i2c_wait();
+		length--;
+		if (length == 1) kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TXAK;
+		if (count < BUFFER_LENGTH) {
+			rxBuffer[count++] = kinetisk_pi2c->D;
+		} else {
+			tmp = kinetisk_pi2c->D;
+		}
+	}
+	i2c_wait();
+	kinetisk_pi2c->C1 = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
+	if (count < BUFFER_LENGTH) {
+		rxBuffer[count++] = kinetisk_pi2c->D;
+	} else {
+		tmp = kinetisk_pi2c->D;
+	}
+	if (sendStop) kinetisk_pi2c->C1 = I2C_C1_IICEN;
+	rxBufferLength = count;
+	return count;
+}
+
+int TwoWire::available(void)
+{
+	return rxBufferLength - rxBufferIndex;
+}
+
+int TwoWire::read(void)
+{
+	if (rxBufferIndex >= rxBufferLength) return -1;
+	return rxBuffer[rxBufferIndex++];
+}
+
+int TwoWire::peek(void)
+{
+	if (rxBufferIndex >= rxBufferLength) return -1;
+	return rxBuffer[rxBufferIndex];
+}
+
+
+// alternate function prototypes
+void TwoWire::send(uint8_t *s, uint8_t n)   
+{
+	write(s, n); 
+}
+void TwoWire::send(int n)
+{ 
+	write((uint8_t)n); 
+}
+
+void TwoWire::send(char *s)
+{ 
+	write(s); 
+}
+
+uint8_t TwoWire::receive(void) 
+{
+    int c = read();
+    if (c < 0) return 0;
+    return c;
 }
 
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity)
@@ -352,197 +590,30 @@ uint8_t TwoWire::requestFrom(int address, int quantity, int sendStop)
   return requestFrom((uint8_t)address, (uint8_t)quantity, (uint8_t)sendStop);
 }
 
-void TwoWire::beginTransmission(uint8_t address)
-{
-  // indicate that we are transmitting
-  transmitting = 1;
-  // set address of targeted slave
-  txAddress = address;
-  // reset tx buffer iterator vars
-  txBufferIndex = 0;
-  txBufferLength = 0;
-}
-
 void TwoWire::beginTransmission(int address)
 {
-  beginTransmission((uint8_t)address);
+	beginTransmission((uint8_t)address);
 }
 
-//
-//	Originally, 'endTransmission' was an f(void) function.
-//	It has been modified to take one parameter indicating
-//	whether or not a STOP should be performed on the bus.
-//	Calling endTransmission(false) allows a sketch to 
-//	perform a repeated start. 
-//
-//	WARNING: Nothing in the library keeps track of whether
-//	the bus tenure has been properly ended with a STOP. It
-//	is very possible to leave the bus in a hung state if
-//	no call to endTransmission(true) is made. Some I2C
-//	devices will behave oddly if they do not see a STOP.
-//
-uint8_t TwoWire::endTransmission(uint8_t sendStop)
-{
-  // transmit buffer (blocking)
-  int8_t ret = twi_writeTo(txAddress, txBuffer, txBufferLength, 1, sendStop);
-  // reset tx buffer iterator vars
-  txBufferIndex = 0;
-  txBufferLength = 0;
-  // indicate that we are done transmitting
-  transmitting = 0;
-  return ret;
-}
-
-//	This provides backwards compatibility with the original
-//	definition, and expected behaviour, of endTransmission
-//
 uint8_t TwoWire::endTransmission(void)
 {
-  return endTransmission(true);
+	return endTransmission(true);
 }
 
-// must be called in:
-// slave tx event callback
-// or after beginTransmission(address)
-size_t TwoWire::write(uint8_t data)
+void TwoWire::begin(int address)
 {
-  if(transmitting){
-  // in master transmitter mode
-    // don't bother if buffer is full
-    if(txBufferLength >= BUFFER_LENGTH){
-      setWriteError();
-      return 0;
-    }
-    // put byte in tx buffer
-    txBuffer[txBufferIndex] = data;
-    ++txBufferIndex;
-    // update amount in buffer   
-    txBufferLength = txBufferIndex;
-  }else{
-  // in slave send mode
-    // reply to master
-    twi_transmit(&data, 1);
-  }
-  return 1;
+	begin((uint8_t)address);
 }
 
-// must be called in:
-// slave tx event callback
-// or after beginTransmission(address)
-size_t TwoWire::write(const uint8_t *data, size_t quantity)
-{
-  if(transmitting){
-  // in master transmitter mode
-    for(size_t i = 0; i < quantity; ++i){
-      write(data[i]);
-    }
-  }else{
-  // in slave send mode
-    // reply to master
-    twi_transmit(data, quantity);
-  }
-  return quantity;
-}
-
-// must be called in:
-// slave rx event callback
-// or after requestFrom(address, numBytes)
-int TwoWire::available(void)
-{
-  return rxBufferLength - rxBufferIndex;
-}
-
-// must be called in:
-// slave rx event callback
-// or after requestFrom(address, numBytes)
-int TwoWire::read(void)
-{
-  int value = -1;
-  
-  // get each successive byte on each call
-  if(rxBufferIndex < rxBufferLength){
-    value = rxBuffer[rxBufferIndex];
-    ++rxBufferIndex;
-  }
-
-  return value;
-}
-
-// must be called in:
-// slave rx event callback
-// or after requestFrom(address, numBytes)
-int TwoWire::peek(void)
-{
-  int value = -1;
-  
-  if(rxBufferIndex < rxBufferLength){
-    value = rxBuffer[rxBufferIndex];
-  }
-
-  return value;
-}
-
-void TwoWire::flush(void)
-{
-  // XXX: to be implemented.
-}
-
-// behind the scenes function that is called when data is received
-void TwoWire::onReceiveService(uint8_t* inBytes, int numBytes)
-{
-  // don't bother if user hasn't registered a callback
-  if(!user_onReceive){
-    return;
-  }
-  // don't bother if rx buffer is in use by a master requestFrom() op
-  // i know this drops data, but it allows for slight stupidity
-  // meaning, they may not have read all the master requestFrom() data yet
-  if(rxBufferIndex < rxBufferLength){
-    return;
-  }
-  // copy twi rx buffer into local read buffer
-  // this enables new reads to happen in parallel
-  for(uint8_t i = 0; i < numBytes; ++i){
-    rxBuffer[i] = inBytes[i];    
-  }
-  // set rx iterator vars
-  rxBufferIndex = 0;
-  rxBufferLength = numBytes;
-  // alert user program
-  user_onReceive(numBytes);
-}
-
-// behind the scenes function that is called when data is requested
-void TwoWire::onRequestService(void)
-{
-  // don't bother if user hasn't registered a callback
-  if(!user_onRequest){
-    return;
-  }
-  // reset tx buffer iterator vars
-  // !!! this will kill any pending pre-master sendTo() activity
-  txBufferIndex = 0;
-  txBufferLength = 0;
-  // alert user program
-  user_onRequest();
-}
-
-// sets function called on slave write
 void TwoWire::onReceive( void (*function)(int) )
 {
-  user_onReceive = function;
+	user_onReceive = function;
 }
 
-// sets function called on slave read
 void TwoWire::onRequest( void (*function)(void) )
 {
-  user_onRequest = function;
+	user_onRequest = function;
 }
 
-// Preinstantiate Objects //////////////////////////////////////////////////////
-
-TwoWire Wire = TwoWire();
-
-#endif // __AVR__
-
-#endif // WIRE_DEFINE_WIRE0
+#endif // __MK20DX256__ || __MK64FX512__ || __MK66FX1M0__ || __MKL26Z64__
+#endif
