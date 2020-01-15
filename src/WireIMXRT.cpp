@@ -309,36 +309,6 @@ uint8_t TwoWire::requestFrom(uint8_t addr, uint8_t qty, uint32_t iaddr, uint8_t 
 
 
 
-PROGMEM
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c1_hardware = {
-	CCM_CCGR2, CCM_CCGR2_LPI2C1(CCM_CCGR_ON),
-		{{18, 3 | 0x10, &IOMUXC_LPI2C1_SDA_SELECT_INPUT, 1}, {0xff, 0xff, nullptr, 0}},
-		{{19, 3 | 0x10, &IOMUXC_LPI2C1_SCL_SELECT_INPUT, 1}, {0xff, 0xff, nullptr, 0}},
-	IRQ_LPI2C1
-};
-TwoWire Wire(&IMXRT_LPI2C1, TwoWire::i2c1_hardware);
-
-PROGMEM
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c3_hardware = {
-	CCM_CCGR2, CCM_CCGR2_LPI2C3(CCM_CCGR_ON),
-		{{17, 1 | 0x10, &IOMUXC_LPI2C3_SDA_SELECT_INPUT, 2}, {36, 2 | 0x10, &IOMUXC_LPI2C3_SDA_SELECT_INPUT, 1}},
-		{{16, 1 | 0x10, &IOMUXC_LPI2C3_SCL_SELECT_INPUT, 2}, {37, 2 | 0x10, &IOMUXC_LPI2C3_SCL_SELECT_INPUT, 1}},
-	IRQ_LPI2C3
-};
-TwoWire Wire1(&IMXRT_LPI2C3, TwoWire::i2c3_hardware);
-
-PROGMEM
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c4_hardware = {
-	CCM_CCGR6, CCM_CCGR6_LPI2C4_SERIAL(CCM_CCGR_ON),
-		{{25, 0 | 0x10, &IOMUXC_LPI2C4_SDA_SELECT_INPUT, 1}, {0xff, 0xff, nullptr, 0}},
-		{{24, 0 | 0x10, &IOMUXC_LPI2C4_SCL_SELECT_INPUT, 1}, {0xff, 0xff, nullptr, 0}},
-	IRQ_LPI2C4
-};
-TwoWire Wire2(&IMXRT_LPI2C4, TwoWire::i2c4_hardware);
-
-
-
-
 // Timeout if a device stretches SCL this long, in microseconds
 #define CLOCK_STRETCH_TIMEOUT 15000
 
