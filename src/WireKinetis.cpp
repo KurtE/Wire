@@ -48,8 +48,6 @@
 #undef I2C0_SLTH
 #undef I2C0_SLTL
 
-void sda_rising_isr0(void);
-void sda_rising_isr1(void);
 
 void TwoWire::begin(void)
 {
@@ -409,17 +407,7 @@ void TwoWire::isr(void)
 		#ifdef WIRE_HAS_STOP_INTERRUPT
 		port().FLT |= I2C_FLT_STOPIE;
 		#else
-		#if defined(WIRE_IMPLEMENT_WIRE) && !defined(WIRE_IMPLEMENT_WIRE1)
-		attachInterrupt(hardware.sda_pin[sda_pin_index], sda_rising_isr0, RISING);
-		#elif !defined(WIRE_IMPLEMENT_WIRE) && defined(WIRE_IMPLEMENT_WIRE1)
-		attachInterrupt(hardware.sda_pin[sda_pin_index], sda_rising_isr1, RISING);
-		#elif defined(WIRE_IMPLEMENT_WIRE) && defined(WIRE_IMPLEMENT_WIRE1)
-		if (this == &Wire) {
-			attachInterrupt(hardware.sda_pin[sda_pin_index], sda_rising_isr0, RISING);
-		} else if (this == &Wire1) {
-			attachInterrupt(hardware.sda_pin[sda_pin_index], sda_rising_isr1, RISING);
-		}
-		#endif
+		attachInterrupt(hardware.sda_pin[sda_pin_index], hardware.sda_rising_isr, RISING);
 		#endif // WIRE_HAS_STOP_INTERRUPT
 		//digitalWriteFast(4, HIGH);
 		data = port().D;
@@ -437,19 +425,6 @@ void TwoWire::isr(void)
 // Sadly, the I2C in older Kinetis K series lacks the stop detect interrupt
 // This pin change interrupt hack is needed to detect the stop condition
 #if !defined(WIRE_HAS_STOP_INTERRUPT)
-
-#if defined(WIRE_IMPLEMENT_WIRE)
-void sda_rising_isr0(void)
-{
-	Wire.sda_rising_isr();
-}
-#endif
-#if defined(WIRE_IMPLEMENT_WIRE1)
-void sda_rising_isr1(void)
-{
-	Wire1.sda_rising_isr();
-}
-#endif
 
 void TwoWire::sda_rising_isr(void)
 {
@@ -836,96 +811,12 @@ uint8_t twi_writeTo(uint8_t address, uint8_t* data, uint8_t length, uint8_t wait
 	return Wire.endTransmission(sendStop);
 }
 
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c0_hardware = {
-	SIM_SCGC4, SIM_SCGC4_I2C0,
-#if defined(__MKL26Z64__) || defined(__MK20DX128__) || defined(__MK20DX256__)
-	18, 17, 255, 255, 255,
-	2, 2, 0, 0, 0,
-	19, 16, 255, 255, 255,
-	2, 2, 0, 0, 0,
-#elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	18, 17, 34, 8, 48,
-	2, 2, 5, 7, 2,
-	19, 16, 33, 7, 47,
-	2, 2, 5, 7, 2,
-#endif
-	IRQ_I2C0
-};
-
-#if defined(__MKL26Z64__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c1_hardware = {
-	SIM_SCGC4, SIM_SCGC4_I2C1,
-#if defined(__MKL26Z64__)
-	23, 255, 255, 255, 255,
-	2, 0, 0, 0, 0,
-	22, 255, 255, 255, 255,
-	2, 0, 0, 0, 0,
-#elif defined(__MK20DX256__)
-	30, 255, 255, 255, 255,
-	2, 0, 0, 0, 0,
-	29, 255, 255, 255, 255,
-	2, 0, 0, 0, 0,
-#elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	38, 58, 255, 255, 255,
-	2, 6, 0, 0, 0,
-	37, 59, 255, 255, 255,
-	2, 6, 0, 0, 0,
-#endif
-	IRQ_I2C1
-};
-#endif
-
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c2_hardware = {
-	SIM_SCGC1, SIM_SCGC1_I2C2,
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	4, 255, 255, 255, 255,
-	5, 0, 0, 0, 0,
-	3, 26, 255, 255, 255,
-	5, 5, 0, 0, 0,
-#endif
-	IRQ_I2C2
-};
-#endif
-
-#if defined(__MK66FX1M0__)
-constexpr TwoWire::I2C_Hardware_t TwoWire::i2c3_hardware = {
-	SIM_SCGC1, SIM_SCGC1_I2C3,
-#if defined(__MK66FX1M0__)
-	56, 255, 255, 255, 255,
-	2, 0, 0, 0, 0,
-	57, 255, 255, 255, 255,
-	2, 0, 0, 0, 0,
-#endif
-	IRQ_I2C3
-};
-#endif
 
 // Helper to transform a non-constant expression of the form
 // &(*(KINETIS_I2C_t *)0x40066000)
 // into a compile time constant.
 #define MAKE_CONST(x) (__builtin_constant_p(x) ? (x) : (x))
 
-#ifdef WIRE_IMPLEMENT_WIRE
-constexpr uintptr_t i2c0_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C0));
-TwoWire Wire(i2c0_addr, TwoWire::i2c0_hardware);
-void i2c0_isr(void) { Wire.isr(); }
-#endif
-#ifdef WIRE_IMPLEMENT_WIRE1
-constexpr uintptr_t i2c1_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C1));
-TwoWire Wire1(i2c1_addr, TwoWire::i2c1_hardware);
-void i2c1_isr(void) { Wire1.isr(); }
-#endif
-#ifdef WIRE_IMPLEMENT_WIRE2
-constexpr uintptr_t i2c2_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C2));
-TwoWire Wire2(i2c2_addr, TwoWire::i2c2_hardware);
-void i2c2_isr(void) { Wire2.isr(); }
-#endif
-#ifdef WIRE_IMPLEMENT_WIRE3
-constexpr uintptr_t i2c3_addr = uintptr_t(MAKE_CONST(&KINETIS_I2C3));
-TwoWire Wire3(i2c3_addr, TwoWire::i2c3_hardware);
-void i2c3_isr(void) { Wire3.isr(); }
-#endif
 
 
 #endif // __arm__ && TEENSYDUINO

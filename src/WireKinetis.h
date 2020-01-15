@@ -40,7 +40,7 @@
 #if defined(__MKL26Z64__)
 #define WIRE_IMPLEMENT_WIRE
 //Wire1 consumes precious memory on Teensy LC
-//#define WIRE_IMPLEMENT_WIRE1
+#define WIRE_IMPLEMENT_WIRE1
 #define WIRE_HAS_STOP_INTERRUPT
 
 // Teensy 3.0
@@ -66,7 +66,7 @@
 #define WIRE_IMPLEMENT_WIRE1
 #define WIRE_IMPLEMENT_WIRE2
 //Wire3 is seldom used on Teensy 3.6
-//#define WIRE_IMPLEMENT_WIRE3
+#define WIRE_IMPLEMENT_WIRE3
 #define WIRE_HAS_START_INTERRUPT
 #define WIRE_HAS_STOP_INTERRUPT
 
@@ -85,6 +85,9 @@ public:
 		uint8_t  scl_pin[5];
 		uint8_t  scl_mux[5];
 		IRQ_NUMBER_t irq;
+		#if !defined(WIRE_HAS_STOP_INTERRUPT)
+		void     (*sda_rising_isr)();
+		#endif
 	} I2C_Hardware_t;
 	static const I2C_Hardware_t i2c0_hardware;
 	static const I2C_Hardware_t i2c1_hardware;
