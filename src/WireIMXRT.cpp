@@ -346,5 +346,18 @@ void TwoWire::setClock(uint32_t frequency)
 	port->MFCR = LPI2C_MFCR_RXWATER(1) | LPI2C_MFCR_TXWATER(1);
 	port->MCR = LPI2C_MCR_MEN;
 }
+//#include "debug/printf.h"
+
+// BUGBUG:: Looks like some libraries have hard coded references to Wire object which don't always get resolved.
+PROGMEM
+constexpr TwoWire::I2C_Hardware_t TwoWire::i2c1_hardware = {
+	CCM_CCGR2, CCM_CCGR2_LPI2C1(CCM_CCGR_ON),
+		{{18, 3 | 0x10, &IOMUXC_LPI2C1_SDA_SELECT_INPUT, 1}, {0xff, 0xff, nullptr, 0}},
+		{{19, 3 | 0x10, &IOMUXC_LPI2C1_SCL_SELECT_INPUT, 1}, {0xff, 0xff, nullptr, 0}},
+	IRQ_LPI2C1
+};
+TwoWire Wire(&IMXRT_LPI2C1, TwoWire::i2c1_hardware);
+
+
 
 #endif
